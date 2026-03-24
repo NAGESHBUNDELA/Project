@@ -21,6 +21,9 @@ export const subscriptionService = {
   getPublicPrices: () => http<PublicPricesPayload>("/subscriptions/prices"),
   checkout: (payload: { plan: SubscriptionPlan; charityId?: string; contributionPercent: number }) =>
     http<{ url: string }>("/subscriptions/checkout", { method: "POST", json: payload }),
+  /** Call once after Stripe redirects back with session_id — fixes inactive DB when webhooks fail locally. */
+  verifyCheckout: (payload: { sessionId: string }) =>
+    http<{ synced: boolean }>("/subscriptions/verify-checkout", { method: "POST", json: payload }),
   cancel: (cancelAt: "immediately" | "period_end") =>
     http<{ message: string }>("/subscriptions/cancel", { method: "POST", json: { cancelAt } }),
 };

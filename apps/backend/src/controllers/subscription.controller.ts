@@ -28,6 +28,15 @@ export const cancelSubscription = async (req: Request, res: Response): Promise<v
   }
 };
 
+export const verifyCheckout = async (req: Request, res: Response): Promise<void> => {
+  try {
+    await SubscriptionService.verifyCheckoutSessionForUser(req.userId!, req.body);
+    res.status(200).json({ success: true, data: { synced: true } });
+  } catch (err: any) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
 export const stripeWebhook = async (req: Request, res: Response): Promise<void> => {
   try {
     const signature = req.headers["stripe-signature"] as string;
