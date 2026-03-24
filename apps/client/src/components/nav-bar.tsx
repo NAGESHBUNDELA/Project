@@ -1,0 +1,20 @@
+import { Link } from "react-router-dom";
+import { useAuth } from "../state/auth";
+
+export function NavBar() {
+  const { user, logout } = useAuth();
+
+  return (
+    <header className="nav">
+      <div className="brand">Golf For Good</div>
+      <nav>
+        <Link to="/">Home</Link>
+        <Link to="/charities">Charities</Link>
+        <Link to="/pricing">Pricing</Link>
+        {user && <Link to="/dashboard">Dashboard</Link>}
+        {user?.role === "admin" && <Link to="/admin">Admin</Link>}
+        {!user ? <Link to="/login">Login</Link> : <button onClick={logout}>Logout</button>}
+      </nav>
+    </header>
+  );
+}
