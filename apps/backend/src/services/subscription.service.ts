@@ -4,6 +4,7 @@ import { SubscriptionStatus } from "db/models";
 import type {
   CreateCheckoutInput,
   CancelSubscriptionInput,
+  VerifyCheckoutInput,
 } from "../zodValidation/SubscriptionValidation.js";
 
 const getStripe = () => {
@@ -88,6 +89,105 @@ export const getPublicSubscriptionPrices = async (): Promise<{
   };
 };
 
+const subscriptionIdFromCheckoutSession = (
+  session: Stripe.Checkout.Session
+): string | null => {
+  const sub = session.subscription;
+  if (typeof sub === "string" && sub.length > 0) return sub;
+  if (
+    sub &&
+    typeof sub === "object" &&
+    "id" in sub &&
+    typeof (sub as { id: unknown }).id === "string"
+  ) {
+    return (sub as Stripe.Subscription).id;
+  }
+  return null;
+};
+
+/** Shared by Stripe webhooks and return-from-checkout verification. */
+export const applyPaidSubscriptionFromCheckoutSession = async (
+  session: Stripe.Checkout.Session
+): Promise<void> => {
+  const stripe = getStripe();
+  const { userId, charityId, contributionPercent } = session.metadata || {};
+  if (!userId) {
+    throw new Error("Missing userId in checkout metadata");
+  }
+
+  let subId = subscriptionIdFromCheckoutSession(session);
+  if (!subId) {
+    const full = await stripe.checkout.sessions.retrieve(session.id, {
+      expand: ["subscription"],
+    });
+    subId = subscriptionIdFromCheckoutSession(full);
+  }
+  if (!subId) {
+    throw new Error("No subscription on checkout session yet");
+  }
+
+  const stripeSubscription = (await stripe.subscriptions.retrieve(subId)) as {
+    items: { data: Array<{ price?: { recurring?: { interval?: string } } }> };
+    current_period_start: number;
+    current_period_end: number;
+  };
+
+  const item = stripeSubscription.items.data[0];
+  if (!item) throw new Error("No subscription items found");
+
+  const update: Record<string, unknown> = {
+    "subscription.stripeCustomerId": session.customer,
+    "subscription.stripeSubscriptionId": subId,
+    "subscription.status": SubscriptionStatus.Active,
+    "subscription.plan":
+      item.price?.recurring?.interval === "year" ? "yearly" : "monthly",
+    "subscription.currentPeriodStart": new Date(
+      stripeSubscription.current_period_start * 1000
+    ),
+    "subscription.currentPeriodEnd": new Date(
+      stripeSubscription.current_period_end * 1000
+    ),
+  };
+
+  if (charityId && /^[a-f\d]{24}$/i.test(charityId)) {
+    update["charityContribution.charityId"] = charityId;
+    update["charityContribution.contributionPercent"] =
+      Number(contributionPercent) || 10;
+  }
+
+  await User.findByIdAndUpdate(userId, { $set: update });
+};
+
+/**
+ * Use after Stripe redirect if webhooks are unreliable locally — reads Checkout Session and updates the user.
+ */
+export const verifyCheckoutSessionForUser = async (
+  userId: string,
+  data: VerifyCheckoutInput
+): Promise<void> => {
+  const stripe = getStripe();
+  const session = await stripe.checkout.sessions.retrieve(data.sessionId, {
+    expand: ["subscription"],
+  });
+
+  if (session.metadata?.userId !== userId) {
+    throw new Error("This checkout does not belong to your account");
+  }
+
+  if (session.mode !== "subscription") {
+    throw new Error("Invalid checkout session mode");
+  }
+
+  const paid =
+    session.payment_status === "paid" ||
+    session.payment_status === "no_payment_required";
+  if (!paid) {
+    throw new Error("Payment not completed yet");
+  }
+
+  await applyPaidSubscriptionFromCheckoutSession(session);
+};
+
 // ─── createCheckoutSession ────────────────────────────────────────────────────
 
 export const createCheckoutSession = async (
@@ -103,23 +203,27 @@ export const createCheckoutSession = async (
   if (!customerId) {
     const customer = await stripe.customers.create({ email: user.email });
     customerId = customer.id;
+    await User.findByIdAndUpdate(userId, {
+      $set: { "subscription.stripeCustomerId": customerId },
+    });
   }
 
   const priceId = getPriceId(data.plan);
+  const clientBase = (process.env.CLIENT_URL || "http://localhost:5173").replace(/\/$/, "");
 
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
     payment_method_types: ["card"],
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${process.env.CLIENT_URL}/dashboard?subscribed=true`,
-    cancel_url: `${process.env.CLIENT_URL}/pricing`,
+    success_url: `${clientBase}/dashboard?subscribed=true&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${clientBase}/pricing`,
     metadata: {
-        userId,
-        charityId: data.charityId || "",
-        contributionPercent: String(data.contributionPercent),
+      userId,
+      charityId: data.charityId || "",
+      contributionPercent: String(data.contributionPercent),
     },
-    });
+  });
 
   return { url: session.url };
 };
@@ -166,7 +270,7 @@ export const handleWebhook = async (
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
-      await onCheckoutComplete(session);
+      await onCheckoutCompleteEvent(session);
       break;
     }
     case "invoice.payment_succeeded": {
@@ -189,43 +293,14 @@ export const handleWebhook = async (
 
 // ─── Webhook handlers ─────────────────────────────────────────────────────────
 
-const onCheckoutComplete = async (session: Stripe.Checkout.Session) => {
-  const stripe = getStripe();
-  const { userId, charityId, contributionPercent } = session.metadata || {};
+const onCheckoutCompleteEvent = async (session: Stripe.Checkout.Session) => {
+  const { userId } = session.metadata || {};
   if (!userId) return;
-
-  if (!session.subscription || typeof session.subscription !== "string") {
-    throw new Error("Invalid subscription in session");
+  try {
+    await applyPaidSubscriptionFromCheckoutSession(session);
+  } catch (err) {
+    console.error("[stripe] checkout.session.completed handler failed:", err);
   }
-
-  const stripeSubscription = (await stripe.subscriptions.retrieve(
-    session.subscription
-  )) as any;
-
-  const item = stripeSubscription.items.data[0];
-  if (!item) throw new Error("No subscription items found");
-
-  const update: Record<string, unknown> = {
-    "subscription.stripeCustomerId": session.customer,
-    "subscription.stripeSubscriptionId": session.subscription,
-    "subscription.status": SubscriptionStatus.Active,
-    "subscription.plan":
-      item.price.recurring?.interval === "year" ? "yearly" : "monthly",
-    "subscription.currentPeriodStart": new Date(
-      stripeSubscription.current_period_start * 1000
-    ),
-    "subscription.currentPeriodEnd": new Date(
-      stripeSubscription.current_period_end * 1000
-    ),
-  };
-
-  if (charityId) {
-    update["charityContribution.charityId"] = charityId;
-    update["charityContribution.contributionPercent"] =
-      Number(contributionPercent) || 10;
-  }
-
-  await User.findByIdAndUpdate(userId, { $set: update });
 };
 
 const onPaymentSucceeded = async (invoice: Stripe.Invoice) => {

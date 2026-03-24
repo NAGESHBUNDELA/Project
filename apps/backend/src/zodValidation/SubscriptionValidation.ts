@@ -26,6 +26,10 @@ export const cancelSubscriptionSchema = z.object({
   cancelAt: z.enum(["immediately", "period_end"]).default("period_end"),
 });
 
+export const verifyCheckoutSchema = z.object({
+  sessionId: z.string().min(10, "sessionId is required"),
+});
+
 //Stripe webhook
 
 export const stripeWebhookSchema = z.object({
@@ -47,5 +51,6 @@ export const updateContributionSchema = z.object({
 
 export type CreateCheckoutInput = z.infer<typeof createCheckoutSchema>;
 export type CancelSubscriptionInput = z.infer<typeof cancelSubscriptionSchema>;
+export type VerifyCheckoutInput = z.infer<typeof verifyCheckoutSchema>;
 export type StripeWebhookInput = z.infer<typeof stripeWebhookSchema>;
 export type UpdateContributionInput = z.infer<typeof updateContributionSchema>;

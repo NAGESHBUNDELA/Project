@@ -5,6 +5,7 @@ import { authService } from "../services/auth.service";
 import { scoreService } from "../services/score.service";
 import { userService } from "../services/user.service";
 import { winnerService } from "../services/winner.service";
+import { subscriptionService } from "../services/subscription.service";
 import type { Score, Winner } from "../types/models";
 
 export function UserDashboardPage() {
@@ -52,21 +53,35 @@ export function UserDashboardPage() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("subscribed") !== "true") return;
 
+    const sessionId = params.get("session_id");
     let cancelled = false;
+
     void (async () => {
+      if (sessionId) {
+        for (let attempt = 0; attempt < 10 && !cancelled; attempt++) {
+          try {
+            await subscriptionService.verifyCheckout({ sessionId });
+            await loadData();
+            window.history.replaceState({}, "", "/dashboard");
+            setMessage("Subscription synced from Stripe. You can add scores.");
+            return;
+          } catch {
+            await new Promise((r) => setTimeout(r, 600));
+          }
+        }
+      }
+
       for (let i = 0; i < 25 && !cancelled; i++) {
         try {
           const me = await refreshMe();
           if (me?.subscription?.status === "active") {
-            const [sc, wn] = await Promise.all([scoreService.list(), winnerService.myWinnings()]);
-            setScores(sc);
-            setWinnings(wn);
+            await loadData();
             window.history.replaceState({}, "", "/dashboard");
             setMessage("Payment confirmed. Score entry is unlocked.");
             break;
           }
         } catch {
-          /* webhook may lag */
+          /* ignore */
         }
         await new Promise((r) => setTimeout(r, 700));
       }
@@ -75,7 +90,7 @@ export function UserDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [refreshMe]);
+  }, [refreshMe, loadData]);
 
   useEffect(() => {
     if (user?.subscription?.status !== "active") {
