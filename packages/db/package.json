@@ -1,17 +1,22 @@
 {
   "name": "db",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "./dist/models/index.js",
+  "types": "./dist/models/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc -p tsconfig.json",
+    "dev": "npm run build"
   },
   "type": "module",
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
-  "exports":{
-    "./models":"./models/index.ts"
+  "exports": {
+    "./models": {
+      "types": "./dist/models/index.d.ts",
+      "default": "./dist/models/index.js"
+    }
   },
   "dependencies": {
     "@types/mongoose": "^5.11.97",

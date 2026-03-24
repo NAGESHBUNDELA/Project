@@ -13,7 +13,16 @@ export function NavBar() {
         <Link to="/pricing">Pricing</Link>
         {user && <Link to="/dashboard">Dashboard</Link>}
         {user?.role === "admin" && <Link to="/admin">Admin</Link>}
-        {!user ? <Link to="/login">Login</Link> : <button onClick={logout}>Logout</button>}
+        {!user ? (
+          <>
+            <Link to="/login">Login</Link>
+            <Link className="btn nav-cta" to="/signup">
+              Sign up
+            </Link>
+          </>
+        ) : (
+          <button onClick={logout}>Logout</button>
+        )}
       </nav>
     </header>
   );

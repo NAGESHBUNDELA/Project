@@ -6,13 +6,23 @@ import type {
   CancelSubscriptionInput,
 } from "../zodValidation/SubscriptionValidation.js";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const getStripe = () => {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) {
+    throw new Error("STRIPE_SECRET_KEY is missing in environment");
+  }
+  return new Stripe(key);
+};
 
-// ─── Price ID map — set these in your Stripe dashboard ───────────────────────
-
-const PRICE_IDS: Record<string, string> = {
-  monthly: process.env.STRIPE_PRICE_MONTHLY!,
-  yearly: process.env.STRIPE_PRICE_YEARLY!,
+const getPriceId = (plan: "monthly" | "yearly") => {
+  const priceId =
+    plan === "monthly"
+      ? process.env.STRIPE_PRICE_MONTHLY
+      : process.env.STRIPE_PRICE_YEARLY;
+  if (!priceId) {
+    throw new Error(`Stripe price ID is missing for ${plan} plan`);
+  }
+  return priceId;
 };
 
 // ─── createCheckoutSession ────────────────────────────────────────────────────
@@ -21,6 +31,7 @@ export const createCheckoutSession = async (
   userId: string,
   data: CreateCheckoutInput
 ) => {
+  const stripe = getStripe();
   const user = await User.findById(userId).select("email subscription");
   if (!user) throw new Error("User not found");
 
@@ -31,10 +42,9 @@ export const createCheckoutSession = async (
     customerId = customer.id;
   }
 
-  const priceId = PRICE_IDS[data.plan];
-if (!priceId) throw new Error("Invalid plan");
+  const priceId = getPriceId(data.plan);
 
-    const session = await stripe.checkout.sessions.create({
+  const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
     payment_method_types: ["card"],
@@ -57,6 +67,7 @@ export const cancelSubscription = async (
   userId: string,
   data: CancelSubscriptionInput
 ) => {
+  const stripe = getStripe();
   const user = await User.findById(userId).select("subscription");
   if (!user) throw new Error("User not found");
 
@@ -76,14 +87,15 @@ export const handleWebhook = async (
   rawBody: Buffer,
   signature: string
 ) => {
+  const stripe = getStripe();
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    throw new Error("STRIPE_WEBHOOK_SECRET is missing in environment");
+  }
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(
-      rawBody,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    );
+    event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
   } catch {
     throw new Error("Invalid webhook signature");
   }
@@ -115,6 +127,7 @@ export const handleWebhook = async (
 // ─── Webhook handlers ─────────────────────────────────────────────────────────
 
 const onCheckoutComplete = async (session: Stripe.Checkout.Session) => {
+  const stripe = getStripe();
   const { userId, charityId, contributionPercent } = session.metadata || {};
   if (!userId) return;
 
@@ -153,6 +166,7 @@ const onCheckoutComplete = async (session: Stripe.Checkout.Session) => {
 };
 
 const onPaymentSucceeded = async (invoice: Stripe.Invoice) => {
+  const stripe = getStripe();
   const customerId = invoice.customer as string;
   //@ts-ignore
   const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string) as any;

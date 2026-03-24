@@ -18,12 +18,15 @@ export function HomePage() {
   return (
     <div className="container">
       <section className="hero">
-        <h1>Track Scores. Win Draws. Support Charity.</h1>
+        <h1>Play Better. Win Monthly. Give Back.</h1>
         <p>
-          Subscription-first golf platform combining performance tracking, monthly draws, and
-          impact-led giving.
+          Emotion-led golf subscription platform combining score tracking, monthly rewards, and
+          transparent charity impact.
         </p>
         <div className="row">
+          <Link className="btn" to="/signup">
+            Create account
+          </Link>
           <Link className="btn" to="/pricing">
             Subscribe
           </Link>
@@ -31,6 +34,20 @@ export function HomePage() {
             Explore Charities
           </Link>
         </div>
+      </section>
+      <section className="grid3">
+        <article className="card">
+          <h3>Score Journey</h3>
+          <p>Submit Stableford scores (1-45). Latest 5 are retained automatically.</p>
+        </article>
+        <article className="card">
+          <h3>Monthly Draw Engine</h3>
+          <p>Random or algorithmic draws with 5-match jackpot rollover logic.</p>
+        </article>
+        <article className="card">
+          <h3>Charity-First Impact</h3>
+          <p>Choose a charity and route minimum 10% contribution from your plan.</p>
+        </article>
       </section>
       <section className="card">
         <h3>Spotlight Charity</h3>
@@ -54,7 +71,6 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [cancelMessage, setCancelMessage] = useState("");
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -80,6 +96,9 @@ export function LoginPage() {
         />
         {error && <p className="err">{error}</p>}
         <button className="btn">Sign in</button>
+        <p className="muted">
+          New user? <Link to="/signup">Create your account</Link>
+        </p>
       </form>
     </div>
   );
@@ -118,6 +137,9 @@ export function SignupPage() {
         />
         {error && <p className="err">{error}</p>}
         <button className="btn">Create account</button>
+        <p className="muted">
+          Already have an account? <Link to="/login">Login</Link>
+        </p>
       </form>
     </div>
   );

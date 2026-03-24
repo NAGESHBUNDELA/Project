@@ -1,8 +1,8 @@
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   font-family: Inter, Segoe UI, Arial, sans-serif;
-  background: #0d1117;
-  color: #e6edf3;
+  background: #f2efea;
+  color: #171717;
 }
 
 * {
@@ -11,12 +11,13 @@
 
 body {
   margin: 0;
-  background: radial-gradient(circle at top, #12203e, #0d1117 45%);
+  background: linear-gradient(180deg, #f4f1ec 0%, #f8f5f0 100%);
   min-height: 100vh;
 }
 
 a {
-  color: #7ee3ff;
+  color: #222;
+  text-decoration: none;
 }
 
 .nav {
@@ -24,16 +25,16 @@ a {
   justify-content: space-between;
   align-items: center;
   padding: 1rem 2rem;
-  border-bottom: 1px solid #22314d;
+  border-bottom: 1px solid #e2ddd4;
   position: sticky;
   top: 0;
   backdrop-filter: blur(8px);
-  background: #0d1117cc;
+  background: #f4f1ece0;
 }
 
 .brand {
   font-weight: 700;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.8px;
 }
 
 .nav nav {
@@ -54,14 +55,17 @@ a {
 
 .hero {
   margin: 1rem 0 2rem;
-  padding: 2rem;
-  border: 1px solid #2f4f85;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #14284b 0%, #0f1726 100%);
+  padding: 2.4rem;
+  border: 1px solid #e1d8c8;
+  border-radius: 18px;
+  background: linear-gradient(160deg, #f7f4ef 0%, #ece4d8 100%);
 }
 
 .hero h1 {
   margin-top: 0;
+  font-family: "Times New Roman", Georgia, serif;
+  font-size: clamp(2rem, 5vw, 4rem);
+  letter-spacing: 0.6px;
 }
 
 .grid3 {
@@ -71,8 +75,8 @@ a {
 }
 
 .card {
-  border: 1px solid #2b3f66;
-  background: #131c2e;
+  border: 1px solid #dfd6c7;
+  background: #faf8f4;
   border-radius: 12px;
   padding: 1rem;
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
@@ -80,8 +84,8 @@ a {
 
 .card:hover {
   transform: translateY(-2px);
-  border-color: #3f68ac;
-  box-shadow: 0 8px 24px #00000035;
+  border-color: #bfae92;
+  box-shadow: 0 8px 24px #71634b22;
 }
 
 .form {
@@ -100,9 +104,9 @@ input,
 select,
 textarea,
 button {
-  background: #0f1726;
-  border: 1px solid #35558e;
-  color: #e6edf3;
+  background: #fff;
+  border: 1px solid #d6ccb8;
+  color: #171717;
   padding: 0.6rem 0.7rem;
   border-radius: 8px;
   transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease;
@@ -112,13 +116,13 @@ input:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  border-color: #7ee3ff;
+  border-color: #9e8158;
 }
 
 .btn {
-  background: #0db6d7;
-  border-color: #0db6d7;
-  color: #001823;
+  background: #1d1d1d;
+  border-color: #1d1d1d;
+  color: #f5f3ef;
   font-weight: 700;
   cursor: pointer;
 }
@@ -129,19 +133,23 @@ textarea:focus {
 
 .btn.ghost {
   background: transparent;
-  color: #7ee3ff;
+  color: #1d1d1d;
+}
+
+.nav-cta {
+  padding: 0.45rem 0.8rem;
 }
 
 .err {
-  color: #ff9fa6;
+  color: #c12020;
 }
 
 .ok {
-  color: #7dffa2;
+  color: #1f7a3a;
 }
 
 .winner {
-  border-top: 1px solid #263b60;
+  border-top: 1px solid #ece3d4;
   padding-top: 0.7rem;
   margin-top: 0.7rem;
 }
