@@ -1,0 +1,21 @@
+{
+  "name": "db",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "exports":{
+    "./models":"./models/index.ts"
+  },
+  "dependencies": {
+    "@types/mongoose": "^5.11.97",
+    "mongoose": "^9.3.2",
+    "typescript": "^6.0.2"
+  }
+}
