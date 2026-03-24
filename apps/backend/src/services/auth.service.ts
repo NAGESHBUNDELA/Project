@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import type { SignOptions } from "jsonwebtoken";
 import { User } from "db/models";
 import type { SignupInput, LoginInput } from "../zodValidation/UserValidation.js";
-import type { IUser } from "../../../../packages/db/models/UserSchema.js";
+import type { IUser } from "db/models";
 
 //signup 
 
